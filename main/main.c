@@ -44,6 +44,64 @@ int v1(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions,
     rewind(*filePlayers);
     rewind(*fileSolutions);
 
+    char lineP[LINE_MAX];
+    int first_block = 1;
+
+    while (fgets(lineP, sizeof(lineP), *filePlayers)) {
+        chomp(lineP);
+        if (lineP[0] == '\0') continue; 
+
+        char buf[LINE_MAX];
+        strncpy(buf, lineP, sizeof(buf));
+        buf[sizeof(buf)-1] = '\0';
+
+        char *fld[MAX_FIELDS] = {0};
+        int nf = split_hash_inplace(buf, fld, MAX_FIELDS);
+
+        const char *pid = (nf >= 1) ? fld[0] : "";
+        const char *meno = (nf >= 2) ? fld[1] : "";
+        const char *krajina = (nf >= 3) ? fld[2] : "";
+        const char *rok = (nf >= 4) ? fld[3] : "";
+
+        if (!first_block) printf("\n");
+        first_block = 0;
+
+        printf("Identifikator: %s\n", pid);
+        printf("Meno a priezvisko: %s\n", meno);
+        printf("Krajina: %s\n", krajina);
+        printf("Rok: %s\n", rok);
+        printf("Vzorka:\n");
+
+        int printed = 0;
+        long pos = ftell(*fileSolutions);
+        rewind(*fileSolutions);
+
+        char lineS[LINE_MAX];
+        while (printed < SAMPLE_LIMIT && fgets(lineS, sizeof(lineS), *fileSolutions)) {
+            chomp(lineS);
+            if (lineS[0] == '\0') continue;
+
+            char tmp[LINE_MAX];
+            strncpy(tmp, lineS, sizeof(tmp));
+            tmp[sizeof(tmp)-1] = '\0';
+
+            char *sf[MAX_FIELDS] = {0};
+            int ns = split_hash_inplace(tmp, sf, MAX_FIELDS);
+            const char *pid_s = (ns >= 2) ? sf[1] : "";
+
+            if (strcmp(pid_s, pid) == 0) {
+                printf("\t%s\n", lineS);
+                printed++;
+            }
+        }
+
+        fseek(*fileSolutions, pos, SEEK_SET);
+    }
+
+    rewind(*fileSudoku);
+    rewind(*filePlayers);
+    rewind(*fileSolutions);
+
     return 0;
 }
 
