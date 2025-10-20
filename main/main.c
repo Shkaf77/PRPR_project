@@ -142,6 +142,14 @@ int cmd_h(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions, const char *fnSudo
     printf("H: Uspešne vytvoreny sumar.\n");
 }
 
+static int read_next_nonempty_line(char *buf, size_t bufsz) {
+    while (fgets(buf, bufsz, stdin)) {
+        chomp(buf);
+        
+        if (buf[0] != '\0') return 1;
+    }
+    return 0;
+}
 
 int v1(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions, const char *fnSudoku, const char *fnPlayers, const char *fnSolutions) {
     if (*fileSudoku == NULL) *fileSudoku = fopen(fnSudoku, "r");
