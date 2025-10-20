@@ -2,6 +2,10 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define LINE_MAX 1024
+#define MAX_FIELDS 16
+#define SAMPLE_LIMIT 10
+
 
 int v1(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions,
        const char *fnSudoku, const char *fnPlayers, const char *fnSolutions)
