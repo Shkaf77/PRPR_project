@@ -34,6 +34,17 @@ static int split_hash_inplace(char *line, char *out[], int max_out) {
     return cnt;
 }
 
+static int is_valid_sid_format(const char *sid) {
+    if (!sid) return 0;
+    if (strlen(sid) != 8) return 0;         
+    if (sid[0]!='S'||sid[1]!='I'||sid[2]!='D') return 0;
+    if (sid[3] < 'A' || sid[3] > 'Z') return 0;
+
+    for (int i=4;i<8;i++) if (sid[i]<'0'||sid[i]>'9') return 0;
+
+    return 1;
+}
+
 
 int v1(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions, const char *fnSudoku, const char *fnPlayers, const char *fnSolutions) {
     if (*fileSudoku == NULL) *fileSudoku = fopen(fnSudoku, "r");
