@@ -11,7 +11,23 @@ static void chomp(char *s) {
     while (n && (s[n-1]=='\n' || s[n-1]=='\r')) s[--n] = '\0';
 }
 
+static int split_hash_inplace(char *line, char *out[], int max_out) {
+    int cnt = 0;
+    char *p = line;
+    while (cnt < max_out) {
+        out[cnt++] = p;    
+        char *h = strchr(p, '#');             
+        if (!h) break;
+        *h = '\0';
+        p = h + 1;  
 
+        if (*p == '\0') {               
+            if (cnt < max_out) out[cnt++] = p; 
+            break;
+        }
+    }
+    return cnt;
+}
 
 int v1(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions,
        const char *fnSudoku, const char *fnPlayers, const char *fnSolutions)
