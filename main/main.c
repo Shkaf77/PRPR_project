@@ -6,6 +6,12 @@
 #define MAX_FIELDS 16
 #define SAMPLE_LIMIT 10
 
+static void chomp(char *s) {
+    size_t n = strlen(s);
+    while (n && (s[n-1]=='\n' || s[n-1]=='\r')) s[--n] = '\0';
+}
+
+
 
 int v1(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions,
        const char *fnSudoku, const char *fnPlayers, const char *fnSolutions)
