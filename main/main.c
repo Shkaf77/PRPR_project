@@ -6,6 +6,11 @@
 #define MAX_FIELDS 16
 #define SAMPLE_LIMIT 10
 
+typedef struct {
+    char gid[64];
+    char line[LINE_MAX];
+} HItem;
+
 static void chomp(char *s) {
     size_t n = strlen(s);
     while (n && (s[n-1]=='\n' || s[n-1]=='\r')) s[--n] = '\0';
@@ -28,6 +33,7 @@ static int split_hash_inplace(char *line, char *out[], int max_out) {
     }
     return cnt;
 }
+
 
 int v1(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions, const char *fnSudoku, const char *fnPlayers, const char *fnSolutions) {
     if (*fileSudoku == NULL) *fileSudoku = fopen(fnSudoku, "r");
@@ -122,8 +128,6 @@ static void handle_command_loop(FILE **fSud, FILE **fPlr, FILE **fSol, const cha
         }
     }
 }
-
-
 
 int main() {
     FILE *f1 = NULL, *f2 = NULL, *f3 = NULL;
