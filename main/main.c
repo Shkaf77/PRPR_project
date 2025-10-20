@@ -29,9 +29,7 @@ static int split_hash_inplace(char *line, char *out[], int max_out) {
     return cnt;
 }
 
-int v1(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions,
-       const char *fnSudoku, const char *fnPlayers, const char *fnSolutions)
-{
+int v1(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions, const char *fnSudoku, const char *fnPlayers, const char *fnSolutions) {
     if (*fileSudoku == NULL) *fileSudoku = fopen(fnSudoku, "r");
     if (*filePlayers == NULL) *filePlayers = fopen(fnPlayers, "r");
     if (*fileSolutions == NULL) *fileSolutions = fopen(fnSolutions, "r");
