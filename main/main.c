@@ -145,7 +145,7 @@ int cmd_h(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions, const char *fnSudo
 static int read_next_nonempty_line(char *buf, size_t bufsz) {
     while (fgets(buf, bufsz, stdin)) {
         chomp(buf);
-        
+
         if (buf[0] != '\0') return 1;
     }
     return 0;
@@ -233,6 +233,8 @@ static void handle_command_loop(FILE **fSud, FILE **fPlr, FILE **fSol, const cha
 
         char c = 0;
         int choice = -1;
+
+        // V1 command
         if (sscanf(cmdline, " %c %d", &c, &choice) == 2 && (c=='v' || c=='V')) {
             if (choice == 1) {
                 v1(fSud, fPlr, fSol, fnSud, fnPlr, fnSol);
@@ -241,6 +243,18 @@ static void handle_command_loop(FILE **fSud, FILE **fPlr, FILE **fSol, const cha
             }
         } else {
 
+        }
+
+        // H command
+        if (sscanf(cmdline, " %c", &c) == 1 && (c=='h'||c=='H')) {
+            char sidline[128];
+            if (!read_next_nonempty_line(sidline, sizeof(sidline))) {
+                /* No SID provided -> treat as invalid input */
+                printf("H: Nespravny vstup.\n");
+                continue;
+            }
+            cmd_h(fSud, fPlr, fSol, fnSud, fnPlr, fnSol, sidline);
+            continue;
         }
     }
 }
