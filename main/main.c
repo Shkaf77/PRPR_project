@@ -45,6 +45,26 @@ static int is_valid_sid_format(const char *sid) {
     return 1;
 }
 
+static int sid_exists_in_sudoku(FILE *fSudoku, const char *sid) {
+    if (!fSudoku) return 0;
+
+    rewind(fSudoku);
+
+    char line[LINE_MAX];
+
+    while (fgets(line, sizeof(line), fSudoku)) {
+        chomp(line);
+        if (line[0]=='\0') continue;
+
+        char buf[LINE_MAX]; strncpy(buf, line, sizeof(buf)); buf[sizeof(buf)-1]='\0';
+        char *fld[MAX_FIELDS]={0}; int n = split_hash_inplace(buf, fld, MAX_FIELDS);
+
+        if (n >= 1 && strcmp(fld[0], sid)==0) return 1;
+    }
+    return 0;
+}
+
+
 
 int v1(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions, const char *fnSudoku, const char *fnPlayers, const char *fnSolutions) {
     if (*fileSudoku == NULL) *fileSudoku = fopen(fnSudoku, "r");
