@@ -64,6 +64,12 @@ static int sid_exists_in_sudoku(FILE *fSudoku, const char *sid) {
     return 0;
 }
 
+static int cmp_hitem_gid(const void *a, const void *b) {
+    const HItem *x = (const HItem*)a;
+    const HItem *y = (const HItem*)b;
+
+    return strcmp(x -> gid, y -> gid);
+}
 
 
 int v1(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions, const char *fnSudoku, const char *fnPlayers, const char *fnSolutions) {
