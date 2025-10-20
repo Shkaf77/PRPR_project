@@ -103,6 +103,27 @@ int v1(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions, const char *
     return 0;
 }
 
+static void handle_command_loop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud, const char *fnPlr, const char *fnSol) {
+    char cmdline[256];
+    while (fgets(cmdline, sizeof(cmdline), stdin)) {
+        chomp(cmdline);
+        if (cmdline[0] == '\0') continue;
+
+        char c = 0;
+        int choice = -1;
+        if (sscanf(cmdline, " %c %d", &c, &choice) == 2 && (c=='v' || c=='V')) {
+            if (choice == 1) {
+                v1(fSud, fPlr, fSol, fnSud, fnPlr, fnSol);
+            } else {
+                printf("V: Nesprávna volba vypisu.\n");
+            }
+        } else {
+
+        }
+    }
+}
+
+
 
 int main() {
     FILE *f1 = NULL, *f2 = NULL, *f3 = NULL;
@@ -111,7 +132,7 @@ int main() {
     char *fname2 = "./RegisterHracov.txt";
     char *fname3 = "./RegisterRieseni.txt";
 
-    v1(&f1, &f2, &f3, fname1, fname2, fname3);
+    handle_command_loop(&f1, &f2, &f3, fname1, fname2, fname3);
 
     if (f1 != NULL) fclose(f1);
     if (f2 != NULL) fclose(f2);
