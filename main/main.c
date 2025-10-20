@@ -54,12 +54,12 @@ static int sid_exists_in_sudoku(FILE *fSudoku, const char *sid) {
 
     while (fgets(line, sizeof(line), fSudoku)) {
         chomp(line);
-        if (line[0]=='\0') continue;
+        if (line[0] == '\0') continue;
 
         char buf[LINE_MAX]; strncpy(buf, line, sizeof(buf)); buf[sizeof(buf)-1]='\0';
         char *fld[MAX_FIELDS]={0}; int n = split_hash_inplace(buf, fld, MAX_FIELDS);
 
-        if (n >= 1 && strcmp(fld[0], sid)==0) return 1;
+        if (n >= 1 && strcmp(fld[0], sid) == 0) return 1;
     }
     return 0;
 }
@@ -69,6 +69,77 @@ static int cmp_hitem_gid(const void *a, const void *b) {
     const HItem *y = (const HItem*)b;
 
     return strcmp(x -> gid, y -> gid);
+}
+
+int cmd_h(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions, const char *fnSudoku, const char *fnPlayers, const char *fnSolutions, const char *sid_input_line) {
+    (void)fPlayers; (void)fnPlayers;
+
+    if (*fSudoku == NULL) *fSudoku = fopen(fnSudoku, "r");
+    if (*fSolutions == NULL) *fSolutions = fopen(fnSolutions, "r");
+    if (*fSudoku == NULL || *fSolutions == NULL) {
+        printf("H: Neotvoreny txt subor.\n");
+
+        return 0;
+    }
+
+    char sid[32]; strncpy(sid, sid_input_line, sizeof(sid)); sid[sizeof(sid)-1]='\0';
+    chomp(sid);
+    if (!is_valid_sid_format(sid) || !sid_exists_in_sudoku(*fSudoku, sid)) {
+        printf("H: Nespravny vstup.\n");
+
+        return 0;
+    }
+
+    rewind(*fSolutions);
+    HItem *arr = NULL; size_t n = 0, cap = 0;
+
+    char lineS[LINE_MAX];
+    while (fgets(lineS, sizeof(lineS), *fSolutions)) {
+        chomp(lineS);
+        if (lineS[0] == '\0') continue;
+
+        char tmp[LINE_MAX]; strncpy(tmp, lineS, sizeof(tmp)); tmp[sizeof(tmp) - 1] = '\0';
+        char *sf[MAX_FIELDS] = {0}; int ns = split_hash_inplace(tmp, sf, MAX_FIELDS);
+
+        const char *gid = (ns >= 1) ? sf[0] : "";
+        const char *sid_s = (ns >= 3) ? sf[2] : "";
+
+        if (strcmp(sid_s, sid)==0) {
+            if (n == cap) {
+                cap = cap ? cap * 2 : 64;
+                HItem *tmpArr = (HItem*)realloc(arr, cap * sizeof(HItem));
+                if (!tmpArr) { free(arr); printf("H: Neotvoreny txt subor.\n"); return; }
+                arr = tmpArr;
+            }
+
+            strncpy(arr[n].gid, gid, sizeof(arr[n].gid)); arr[n].gid[sizeof(arr[n].gid) - 1] = '\0';
+            strncpy(arr[n].line, lineS, sizeof(arr[n].line)); arr[n].line[sizeof(arr[n].line) - 1] = '\0';
+            n++;
+        }
+    }
+
+    if (n > 1) qsort(arr, n, sizeof(HItem), cmp_hitem_gid);
+
+    const char *outname = "Vystup_H.txt";
+
+    FILE *fo = fopen(outname, "w");
+
+    if (!fo) {
+        free(arr);
+
+        printf("H: Neotvoreny txt subor.\n");
+        return 0;
+    }
+
+    for (size_t i=0; i<n; ++i) {
+        fputs(arr[i].line, fo);
+        fputc('\n', fo);
+    }
+
+    fclose(fo);
+    free(arr);
+
+    printf("H: Uspešne vytvoreny sumar.\n");
 }
 
 
