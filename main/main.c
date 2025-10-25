@@ -11,21 +11,25 @@ typedef struct {
     char line[LINE_MAX];
 } HItem;
 
-static void chomp(char *s) {
+void chomp(char *s) {
     size_t n = strlen(s);
     while (n && (s[n - 1] == '\n' || s[n - 1] == '\r')) s[--n] = '\0';
 }
 
-static int split_hash_inplace(char *line, char *out[], int max_out) {
+int splitHashInplace(char *line, char *out[], int max_out) {
     int cnt = 0;
     char *p = line;
     char *h;
     while (cnt < max_out) {
+
         out[cnt++] = p;
         h = strchr(p, '#');
+
         if (!h) break;
+
         *h = '\0';
         p = h + 1;
+
         if (*p == '\0') {
             if (cnt < max_out) out[cnt++] = p;
             break;
@@ -33,7 +37,7 @@ static int split_hash_inplace(char *line, char *out[], int max_out) {
     }
     return cnt;
 }
-
+// v1
 int v1(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions, const char *fnSudoku, const char *fnPlayers, const char *fnSolutions) {
     char lineP[LINE_MAX];
     int first_block = 1;
@@ -71,7 +75,7 @@ int v1(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions, const char *
         buf[sizeof(buf) - 1] = '\0';
 
         for (i = 0; i < MAX_FIELDS; i++) fld[i] = NULL;
-        nf = split_hash_inplace(buf, fld, MAX_FIELDS);
+        nf = splitHashInplace(buf, fld, MAX_FIELDS);
 
         pid = (nf >= 1) ? fld[0] : "";
         meno = (nf >= 2) ? fld[1] : "";
@@ -99,7 +103,7 @@ int v1(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions, const char *
             tmp[sizeof(tmp) - 1] = '\0';
 
             for (i = 0; i < MAX_FIELDS; i++) sf[i] = NULL;
-            ns = split_hash_inplace(tmp, sf, MAX_FIELDS);
+            ns = splitHashInplace(tmp, sf, MAX_FIELDS);
             pid_s = (ns >= 2) ? sf[1] : "";
 
             if (strcmp(pid_s, pid) == 0) {
@@ -118,7 +122,7 @@ int v1(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions, const char *
     return 0;
 }
 
-static void v(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud, const char *fnPlr, const char *fnSol, int choice) {
+void v(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud, const char *fnPlr, const char *fnSol, int choice) {
     switch (choice) {
         case 1:
             v1(fSud, fPlr, fSol, fnSud, fnPlr, fnSol);
@@ -139,7 +143,7 @@ static void v(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud, const ch
 }
 
 
-static int is_valid_sid_format(const char *sid) {
+int isValidSIDFormat(const char *sid) {
     int i;
 
     if (!sid) return 0;
@@ -153,7 +157,7 @@ static int is_valid_sid_format(const char *sid) {
     return 1;
 }
 
-static int sid_exists_in_sudoku(FILE *fSudoku, const char *sid) {
+int SIDExistsInSudoku(FILE *fSudoku, const char *sid) {
     char line[LINE_MAX];
     char buf[LINE_MAX];
     char *fld[MAX_FIELDS];
@@ -171,7 +175,7 @@ static int sid_exists_in_sudoku(FILE *fSudoku, const char *sid) {
         buf[sizeof(buf) - 1] = '\0';
 
         for (i = 0; i < MAX_FIELDS; i++) fld[i] = NULL;
-        n = split_hash_inplace(buf, fld, MAX_FIELDS);
+        n = splitHashInplace(buf, fld, MAX_FIELDS);
 
         for (i = 0; i < n; ++i) {
             if (fld[i] && strcmp(fld[i], sid) == 0) return 1;
@@ -180,13 +184,13 @@ static int sid_exists_in_sudoku(FILE *fSudoku, const char *sid) {
     return 0;
 }
 
-static int cmp_hitem_gid(const void *a, const void *b) {
+int cmpHitemGID(const void *a, const void *b) {
     const HItem *x = (const HItem*)a;
     const HItem *y = (const HItem*)b;
-    return strcmp(x->gid, y->gid);
+    return strcmp(x -> gid, y -> gid);
 }
 
-static void trim_spaces(char *s) {
+void trimSpaces(char *s) {
     char *p = s;
     size_t n;
     while (*p == ' ' || *p == '\t') p++;
@@ -195,7 +199,7 @@ static void trim_spaces(char *s) {
     while (n && (s[n - 1] == ' ' || s[n - 1] == '\t')) s[--n] = '\0';
 }
 
-static void to_upper_ascii(char *s) {
+void toUpperASCII(char *s) {
     for (; *s; ++s) {
         if (*s >= 'a' && *s <= 'z') *s = (char)(*s - 'a' + 'A');
     }
@@ -232,7 +236,7 @@ int cmd_h(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions, const char *fnSudo
     sid[sizeof(sid) - 1] = '\0';
     chomp(sid);
 
-    if (!is_valid_sid_format(sid) || !sid_exists_in_sudoku(*fSudoku, sid)) {
+    if (!isValidSIDFormat(sid) || !SIDExistsInSudoku(*fSudoku, sid)) {
         printf("H: Nespravny vstup.\n");
         return 0;
     }
@@ -247,7 +251,7 @@ int cmd_h(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions, const char *fnSudo
         tmp[sizeof(tmp) - 1] = '\0';
 
         for (i = 0; i < MAX_FIELDS; i++) sf[i] = NULL;
-        ns = split_hash_inplace(tmp, sf, MAX_FIELDS);
+        ns = splitHashInplace(tmp, sf, MAX_FIELDS);
 
         sid_s_norm[0] = '\0';
         for (i = 0; i < ns; i++) {
@@ -259,9 +263,9 @@ int cmd_h(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions, const char *fnSudo
 
                 candidate[sizeof(candidate) - 1] = '\0';
 
-                trim_spaces(candidate);
+                trimSpaces(candidate);
 
-                to_upper_ascii(candidate);
+                toUpperASCII(candidate);
 
                 if (strlen(candidate) == 8 && strncmp(candidate, "SID", 3) == 0) {
                     strcpy(sid_s_norm, candidate);
@@ -293,7 +297,7 @@ int cmd_h(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions, const char *fnSudo
         n++;
     }
 
-    if (n > 1) qsort(arr, n, sizeof(HItem), cmp_hitem_gid);
+    if (n > 1) qsort(arr, n, sizeof(HItem), cmpHitemGID);
 
     fo = fopen("Vystup_H.txt", "w");
     if (!fo) {
@@ -313,7 +317,7 @@ int cmd_h(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions, const char *fnSudo
     return 0;
 }
 
-static int read_next_nonempty_line(char *buf, size_t bufsz) {
+int readNextNonemptyLine(char *buf, size_t bufsz) {
     while (fgets(buf, bufsz, stdin)) {
         chomp(buf);
         if (buf[0] != '\0') return 1;
@@ -321,7 +325,8 @@ static int read_next_nonempty_line(char *buf, size_t bufsz) {
     return 0;
 }
 
-static void handle_command_loop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud, const char *fnPlr, const char *fnSol) {
+// ine
+void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud, const char *fnPlr, const char *fnSol) {
     char cmdline[256];
     char c;
     int choice;
@@ -347,7 +352,7 @@ static void handle_command_loop(FILE **fSud, FILE **fPlr, FILE **fSol, const cha
 
         if (sscanf(cmdline, " %c", &c) == 1 && (c == 'h' || c == 'H')) {
             printf("Zadajte identifikátor Sudoku (SID): ");
-            if (!read_next_nonempty_line(sidline, sizeof(sidline))) {
+            if (!readNextNonemptyLine(sidline, sizeof(sidline))) {
                 printf("H: Nespravny vstup.\n");
                 continue;
             }
@@ -357,17 +362,17 @@ static void handle_command_loop(FILE **fSud, FILE **fPlr, FILE **fSol, const cha
     }
 }
 
-
 int main(void) {
     FILE *f1 = NULL, *f2 = NULL, *f3 = NULL;
     char *fname1 = "./Sudoku.txt";
     char *fname2 = "./RegisterHracov.txt";
     char *fname3 = "./RegisterRieseni.txt";
 
-    handle_command_loop(&f1, &f2, &f3, fname1, fname2, fname3);
+    handleCommandLoop(&f1, &f2, &f3, fname1, fname2, fname3);
 
     if (f1 != NULL) fclose(f1);
     if (f2 != NULL) fclose(f2);
     if (f3 != NULL) fclose(f3);
+
     return 0;
 }
