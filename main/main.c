@@ -133,13 +133,22 @@ int isNdigits(const char *s, int n) {
     return s[n] == '\0';
 }
 
-int normFiled(char *dst, const char *src, size_t cap) {
+void normFiled(char *dst, const char *src, size_t cap) {
     size_t len;
 
     strncpy(dst, src ? src : "", cap);
     dst[cap - 1] = '\0';
     trimSpaces(dst);
     len = strlen(dst);
+}
+
+int toIntDef (const char *s, int defv) {
+    int v = 0;
+
+    if (!s || !*s) return defv;
+    v = atoi(s);
+
+    return v;
 }
 
 int v2(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions, const char *fnSudoku, const char *fnPlayers, const char *fnSolutions) {
