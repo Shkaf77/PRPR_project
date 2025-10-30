@@ -122,6 +122,30 @@ int v1(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions, const char *
     return 0;
 }
 
+int isNdigits(const char *s, int n) {
+    int i;
+
+    if (!s) return 0;
+
+    for (i = 0; i < n; i++) {
+        if (s[i] < '0' || s[i] > '9') return 0;
+    }
+    return s[n] == '\0';
+}
+
+int normFiled(char *dst, const char *src, size_t cap) {
+    size_t len;
+
+    strncpy(dst, src ? src : "", cap);
+    dst[cap - 1] = '\0';
+    trimSpaces(dst);
+    len = strlen(dst);
+}
+
+int v2(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions, const char *fnSudoku, const char *fnPlayers, const char *fnSolutions) {
+
+}
+
 void v(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud, const char *fnPlr, const char *fnSol, int choice) {
     switch (choice) {
         case 1:
@@ -187,6 +211,7 @@ int SIDExistsInSudoku(FILE *fSudoku, const char *sid) {
 int cmpHitemGID(const void *a, const void *b) {
     const HItem *x = (const HItem*)a;
     const HItem *y = (const HItem*)b;
+
     return strcmp(x -> gid, y -> gid);
 }
 
@@ -205,6 +230,7 @@ void toUpperASCII(char *s) {
     }
 }
 
+//h
 int cmd_h(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions, const char *fnSudoku, const char *fnPlayers, const char *fnSolutions, const char *sid_input_line) {
     char sid[32];
     char lineS[LINE_MAX];
@@ -252,8 +278,8 @@ int cmd_h(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions, const char *fnSudo
 
         for (i = 0; i < MAX_FIELDS; i++) sf[i] = NULL;
         ns = splitHashInplace(tmp, sf, MAX_FIELDS);
-
         sid_s_norm[0] = '\0';
+
         for (i = 0; i < ns; i++) {
             if (sf[i] == NULL || sf[i][0] == '\0') continue;
             {
@@ -361,6 +387,8 @@ void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud,
         }
     }
 }
+
+
 
 int main(void) {
     FILE *f1 = NULL, *f2 = NULL, *f3 = NULL;
