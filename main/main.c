@@ -16,6 +16,15 @@ void chomp(char *s) {
     while (n && (s[n - 1] == '\n' || s[n - 1] == '\r')) s[--n] = '\0';
 }
 
+void trimSpaces(char *s) {
+    char *p = s;
+    size_t n;
+    while (*p == ' ' || *p == '\t') p++;
+    if (p != s) memmove(s, p, strlen(p) + 1);
+    n = strlen(s);
+    while (n && (s[n - 1] == ' ' || s[n - 1] == '\t')) s[--n] = '\0';
+}
+
 int splitHashInplace(char *line, char *out[], int max_out) {
     int cnt = 0;
     char *p = line;
@@ -152,7 +161,198 @@ int toIntDef (const char *s, int defv) {
 }
 
 int v2(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions, const char *fnSudoku, const char *fnPlayers, const char *fnSolutions) {
+    char lineP[LINE_MAX];
+    char bufP[LINE_MAX];
+    char *pf[MAX_FIELDS];
+    int i, nf;
 
+    char lineS[LINE_MAX];
+    char bufS[LINE_MAX];
+    char *sf[MAX_FIELDS];
+    int ns;
+
+    char pid_cur[64];
+    const char *pid;
+    const char *meno;
+    const char *krajina;
+    const char *rok;
+
+    if (*fileSudoku == NULL) *fileSudoku = fopen(fnSudoku, "r");
+    if (*filePlayers == NULL) *filePlayers = fopen(fnPlayers, "r");
+    if (*fileSolutions == NULL) *fileSolutions = fopen(fnSolutions, "r");
+
+    if (*filePlayers == NULL || *fileSolutions == NULL) {
+        printf("V2: Nenaplnene polia.\n");
+
+        return 0;
+    }
+
+    rewind(*filePlayers);
+
+    while (fgets(lineP, sizeof(lineP), *filePlayers)) {
+        int printed = 0;
+        long pos;
+
+        chomp(lineP);
+        if (lineP[0] == '\0') continue;
+
+        strncpy(bufP, lineP, sizeof(bufP));
+        bufP[sizeof(bufP) - 1] = '\0';
+
+        for (i = 0; i < MAX_FIELDS; i++) pf[i] = NULL;
+        nf = splitHashInplace(bufP, pf, MAX_FIELDS);
+
+        pid = (nf >= 1) ? pf[0] : "";
+        meno = (nf >= 2) ? pf[1] : "";
+        krajina = (nf >= 3) ? pf[2] : "";
+        rok = (nf >= 4) ? pf[3] : "";
+
+        strncpy(pid_cur, (nf >= 1 && pf[0]) ? pf[0] : "", sizeof(pid_cur));
+
+        printf("PID: %s / %s / %s\n", pid, rok, krajina);
+        printf("Identita: %s\n", meno);
+        printf("Vysledok:\n");
+
+        pos = ftell(*fileSolutions);
+
+        rewind(*fileSolutions);
+
+        while (printed < SAMPLE_LIMIT && fgets(lineS, sizeof(lineS), *fileSolutions)) {
+            char gid[64] = "";
+            char pid_s[64] = "";
+            char sid[32] = "";
+            char date[16] = "";
+            char diff_sut[8] = ""; 
+            char diff_hry[8] = "";
+            char mins[16] = "";
+            char secs[16] = "";
+            int seconds = -1;
+
+            chomp(lineS);
+            if (lineS[0] == '\0') continue;
+
+            strncpy(bufS, lineS, sizeof(bufS));
+            bufS[sizeof(bufS) - 1] = '\0';
+
+            for (i = 0; i < MAX_FIELDS; i++) sf[i] = NULL;
+
+            ns = splitHashInplace(bufS, sf, MAX_FIELDS);
+
+            for (i = 0; i < ns; ++i) {
+                char tmp[64];
+
+                if (!sf[i] || !*sf[i]) continue;
+
+                normFiled(tmp, sf[i], sizeof(tmp));
+
+                if (gid[0] == '\0' && strncmp(tmp, "GID", 3) == 0) {
+                    strncpy(gid, tmp, sizeof(gid));
+                    gid[sizeof(gid) - 1] = '\0';
+
+                    continue;
+                }
+
+                if (pid_s[0] == '\0' && strncmp(tmp, "PID", 3) == 0) {
+                    strncpy(pid_s, tmp, sizeof(pid_s));
+                    pid_s[sizeof(pid_s) - 1] = '\0';
+
+                    continue;
+                }
+
+                if (sid[0] == '\0' && strncmp(tmp, "SID", 3) == 0) {
+                    strncpy(sid, tmp, sizeof(sid));
+                    sid[sizeof(sid) - 1] = '\0';
+
+                    continue;
+                }
+
+                if (date[0] == '\0' && strlen(tmp) == 8 && isNdigits(tmp, 8)) {
+                    strncpy(date, tmp, sizeof(date));
+                    date[sizeof(date) - 1] = '\0';
+
+                    continue;
+                }
+
+                if (diff_sut[0] == '\0' && strlen(tmp) == 1 && tmp[0] >= 'a' && tmp[0] <= 'z') {
+                    strncpy(diff_sut, tmp, sizeof(diff_sut));
+                    diff_sut[sizeof(diff_sut) - 1] = '\0';
+
+                    continue;
+                }
+
+                if (diff_hry[0] == '\0' && strlen(tmp) == 1 && tmp[0] >= 'A' && tmp[0] <= 'Z') {
+                    strncpy(diff_hry, tmp, sizeof(diff_hry));
+                    diff_hry[sizeof(diff_hry) - 1] = '\0';
+
+                    continue;
+                }
+            }
+
+            int last = -1;
+            int prev = -1;
+
+            for (i = 0; i < ns; ++i) {
+                if (sf[i] && *sf[i]) {
+                    char t[32];
+                    normFiled(t, sf[i], sizeof(t));
+                    if (t[0] && isNdigits(t, (int)strlen(t))) {
+                        prev = last;
+                        last = i;
+                    }
+                }
+            }
+
+            if (diff_sut[0] == '\0' && gid[0]) {
+                size_t lg = strlen(gid);
+                if (lg >= 4 && gid[0]=='G' && gid[1]=='I' && gid[2]=='D' &&
+                    gid[3] >= 'a' && gid[3] <= 'z') {
+                    diff_sut[0] = gid[3];
+                    diff_sut[1] = '\0';
+                }
+            }
+
+            if (diff_hry[0] == '\0' && sid[0]) {
+                size_t ls = strlen(sid);
+                if (ls >= 4 && sid[0]=='S' && sid[1]=='I' && sid[2]=='D' &&
+                    sid[3] >= 'A' && sid[3] <= 'Z') {
+                    diff_hry[0] = sid[3];
+                    diff_hry[1] = '\0';
+                }
+            }
+
+            if (last >= 0) {
+                strncpy(secs, sf[last], sizeof(secs));
+                secs[sizeof(secs) - 1] = '\0';
+            }
+
+            if (prev >= 0) {
+                strncpy(mins, sf[prev], sizeof(mins));
+                mins[sizeof(mins) - 1] = '\0';
+            }
+
+            if (!pid_s[0] || strcmp(pid_s, pid_cur) != 0) continue;
+
+            seconds = toIntDef(mins, 0) * 60 + toIntDef(secs, 0);
+
+            printf("\t%s / %s / %s / %s / %s / %s / %d\n",
+             gid[0] ? gid : "",
+             pid_s[0] ? pid_s : "",
+             sid[0] ? sid : "",
+             date[0] ? date : "",
+             diff_sut[0] ? diff_sut : "", 
+             diff_hry[0] ? diff_hry : "", 
+             seconds
+            ); 
+            
+            printed++;
+        }
+
+        fseek(*fileSolutions, pos, SEEK_SET);
+
+        printf("\n");
+    }
+
+    return 0;
 }
 
 void v(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud, const char *fnPlr, const char *fnSol, int choice) {
@@ -162,7 +362,7 @@ void v(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud, const char *fnP
             break;
 
         case 2:
-            printf("V2: Funkcia este nie je implementovana.\n");
+            v2(fSud, fPlr, fSol, fnSud, fnPlr, fnSol);
             break;
 
         case 3:
@@ -224,15 +424,6 @@ int cmpHitemGID(const void *a, const void *b) {
     return strcmp(x -> gid, y -> gid);
 }
 
-void trimSpaces(char *s) {
-    char *p = s;
-    size_t n;
-    while (*p == ' ' || *p == '\t') p++;
-    if (p != s) memmove(s, p, strlen(p) + 1);
-    n = strlen(s);
-    while (n && (s[n - 1] == ' ' || s[n - 1] == '\t')) s[--n] = '\0';
-}
-
 void toUpperASCII(char *s) {
     for (; *s; ++s) {
         if (*s >= 'a' && *s <= 'z') *s = (char)(*s - 'a' + 'A');
@@ -264,6 +455,7 @@ int cmd_h(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions, const char *fnSudo
     if (*fSolutions == NULL) *fSolutions = fopen(fnSolutions, "r");
     if (*fSudoku == NULL || *fSolutions == NULL) {
         printf("H: Neotvoreny txt subor.\n");
+        
         return 0;
     }
 
