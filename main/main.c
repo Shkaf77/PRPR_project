@@ -46,6 +46,314 @@ int splitHashInplace(char *line, char *out[], int max_out) {
     }
     return cnt;
 }
+
+// n
+int n (FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions, char ***sudokuArr, int *sudokuCnt, char ***playersArr, int *playersCnt, char ***solutionsArr, int *solutionsCnt) {
+    char buf[LINE_MAX];
+    char **arr = NULL;
+    int cnt = 0;
+    int cap = 0;
+    int i;
+
+    if (!fileSudoku || !filePlayers || !fileSolutions || !*fileSudoku || !*filePlayers || !*fileSolutions) {
+        printf("N: Neotvorene txt subory.\n");
+        return 0;
+    }
+
+    if (sudokuArr && *sudokuArr) {
+        for (i = 0; i < (sudokuCnt ? *sudokuCnt : 0); ++i) {
+            free((*sudokuArr)[i]);
+        }
+
+        free(*sudokuArr);
+        *sudokuArr = NULL;
+
+        if (sudokuCnt) {
+            *sudokuCnt = 0;
+        }
+    }
+    if (playersArr && *playersArr) {
+        for (i = 0; i < (playersCnt ? *playersCnt : 0); ++i) {
+            free((*playersArr)[i]);
+        }
+
+        free(*playersArr);
+        *playersArr = NULL;
+
+        if (playersCnt) {
+            *playersCnt = 0;
+        }
+    }
+    if (solutionsArr && *solutionsArr) {
+        for (i = 0; i < (solutionsCnt ? *solutionsCnt : 0); ++i) {
+            free((*solutionsArr)[i]);
+        }
+
+        free(*solutionsArr);
+        *solutionsArr = NULL;
+
+        if (solutionsCnt) {
+            *solutionsCnt = 0;
+        }
+    }
+
+    arr = NULL;
+    cnt = 0;
+    cap = 0;
+
+    rewind(*fileSudoku);
+
+    while (fgets(buf, sizeof(buf), *fileSudoku)) {
+        size_t nlen;
+        char *s;
+
+        chomp(buf);
+
+        nlen = strlen(buf) + 1;
+        s = (char*)malloc(nlen);
+
+        if (!s) {
+            for (i = 0; i < cnt; ++i) {
+                free(arr[i]);
+            }
+            free(arr);
+
+            return 0;
+        }
+
+        memcpy(s, buf, nlen);
+
+        if (cnt == cap) {
+            char **tmp;
+
+            cap = cap ? cap * 2 : 64;
+            tmp = (char**)realloc(arr, cap * sizeof(char*));
+
+            if (!tmp) {
+                free(s);
+
+                for (i = 0; i < cnt; ++i) {
+                    free(arr[i]);
+                }
+
+                free(arr);
+
+                return 0;
+            }
+
+            arr = tmp;
+        }
+
+        arr[cnt++] = s;
+    }
+
+    if (sudokuArr) *sudokuArr = arr;
+    if (sudokuCnt) *sudokuCnt = cnt;
+
+    arr = NULL;
+    cnt = 0;
+    cap = 0;
+
+    rewind(*filePlayers);
+
+    while (fgets(buf, sizeof(buf), *filePlayers)) {
+        size_t nlen;
+        char *s;
+
+        chomp(buf);
+
+        nlen = strlen(buf) + 1;
+        s = (char*)malloc(nlen);
+
+        if (!s) {
+            for (i = 0; i < cnt; ++i) {
+                free(arr[i]);
+            }
+
+            free(arr);
+
+            return 0;
+        }
+
+        memcpy(s, buf, nlen);
+
+        if (cnt == cap) {
+            char **tmp;
+
+            cap = cap ? cap * 2 : 64;
+            tmp = (char**)realloc(arr, cap * sizeof(char*));
+
+            if (!tmp) {
+                free(s);
+
+                for (i = 0; i < cnt; ++i) {
+                    free(arr[i]);
+                }
+
+                free(arr);
+
+                return 0;
+            }
+            arr = tmp;
+        }
+        arr[cnt++] = s;
+    }
+
+    if (playersArr) *playersArr = arr;
+    if (playersCnt) *playersCnt = cnt;
+
+    arr = NULL; 
+    cnt = 0;
+    cap = 0;
+
+    rewind(*fileSolutions);
+
+    while (fgets(buf, sizeof(buf), *fileSolutions)) {
+        size_t nlen;
+        char *s;
+
+        chomp(buf);
+
+        nlen = strlen(buf) + 1;
+        s = (char*)malloc(nlen);
+
+        if (!s) {
+            for (i = 0; i < cnt; ++i) {
+                free(arr[i]);
+            }
+
+            free(arr);
+
+            return 0;
+        }
+
+        memcpy(s, buf, nlen);
+
+        if (cnt == cap) {
+            char **tmp;
+
+            cap = cap ? cap * 2 : 64;
+            tmp = (char**)realloc(arr, cap * sizeof(char*));
+
+            if (!tmp) {
+                free(s);
+
+                for (i = 0; i < cnt; ++i) {
+                    free(arr[i]);
+                }
+
+                free(arr);
+
+                return 0;
+            }
+            arr = tmp;
+        }
+        arr[cnt++] = s;
+    }
+
+    if (solutionsArr) *solutionsArr = arr;
+    if (solutionsCnt) *solutionsCnt = cnt;
+
+    return 0; 
+}
+
+// q
+int q(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions, char ***solutionsArr, int *solutionsCnt) {
+    char yline[64];
+    long Y;
+    char gid[64], pid[64], sid[64];
+    char linebuf[LINE_MAX];
+    int datei, mini, seci;
+    char *newline;
+    int pos, i;
+
+    (void)fileSudoku; (void)filePlayers; (void)fileSolutions;
+
+    if (!solutionsArr || !solutionsCnt || !*solutionsArr) {
+        printf("Q: Polia nie su vytvorene.\n"); 
+        return 0;
+    }
+
+    if (!readline(yline, sizeof(yline))) return 0;
+    Y = strtol(yline, NULL, 10);
+    if (Y < 1) {
+        Y = 1;
+    }
+
+    for (;;) {
+        if (!readline(gid, sizeof(gid))) return 0;
+        if (is_gid_ok(gid)) break;
+        printf("Q: nespravny format vstupu, zadaj znova: ");
+        fflush(stdout);
+    }
+
+    for (;;) {
+        if (!readline(pid, sizeof(pid))) return 0;
+        if (is_pid_ok(pid)) break;
+        printf("Q: nespravny format vstupu, zadaj znova: ");
+        fflush(stdout);
+    }
+
+    for (;;) {
+        if (!readline(sid, sizeof(sid))) return 0;
+        if (is_sid_ok(sid)) break;
+
+        printf("Q: nespravny format vstupu, zadaj znova: ");
+        fflush(stdout);
+    }
+
+    for (;;) {
+        char nums[128];
+        int nread = 0;
+        int ymd, mm, ss;
+        char *p = nums, *endp;
+
+
+        if (!readline(nums, sizeof(nums))) return 0;
+
+        if (sscanf(nums, "%d %d %d", &ymd, &mm, &ss) == 3) {
+            if (is_yyyymmdd_ok(ymd) && mm >= 0 && ss >= 0 && ss <= 59) {
+                datei = ymd; mini = mm; seci = ss;
+
+                break;
+            }
+        }
+
+        printf("Q: nespravny format vstupu, zadaj znova: ");
+        fflush(stdout);
+    }
+
+    int need = (int)(strlen(gid)+1 + strlen(pid)+1 + strlen(sid)+1 + 8+1 + 10+1 + 10+1 + 8);
+
+    (void)need; 
+    sprintf(linebuf, "%s#%s#%s#%08d#%d#%d#", gid, pid, sid, datei, mini, seci);
+
+    newline = (char*)malloc(strlen(linebuf)+1);
+    if (!newline) return 0;
+    strcpy(newline, linebuf);
+
+    if (Y > *solutionsCnt) {
+        Y = *solutionsCnt + 1;
+    }
+
+    pos = (int)Y - 1;
+
+    {
+        char **tmp = (char**)realloc(*solutionsArr, (*solutionsCnt + 1) * sizeof(char*));
+        if (!tmp) { free(newline); return 0; }
+        *solutionsArr = tmp;
+    }
+
+    for (i = *solutionsCnt; i > pos; --i) {
+        (*solutionsArr)[i] = (*solutionsArr)[i-1];
+    }
+
+    (*solutionsArr)[pos] = newline;
+    (*solutionsCnt)++;
+
+    return 0;
+}
+
 // v1
 int v1(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions, const char *fnSudoku, const char *fnPlayers, const char *fnSolutions) {
     char lineP[LINE_MAX];
@@ -455,7 +763,7 @@ int cmd_h(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions, const char *fnSudo
     if (*fSolutions == NULL) *fSolutions = fopen(fnSolutions, "r");
     if (*fSudoku == NULL || *fSolutions == NULL) {
         printf("H: Neotvoreny txt subor.\n");
-        
+
         return 0;
     }
 
