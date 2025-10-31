@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #define LINE_MAX 1024
 #define MAX_FIELDS 16
@@ -45,6 +46,93 @@ int splitHashInplace(char *line, char *out[], int max_out) {
         }
     }
     return cnt;
+}
+
+int isValidSIDFormat(const char *sid) {
+    int i;
+
+    if (!sid) return 0;
+    if (strlen(sid) != 8) return 0;
+    if (sid[0] != 'S' || sid[1] != 'I' || sid[2] != 'D') return 0;
+    if (sid[3] < 'A' || sid[3] > 'Z') return 0;
+
+    for (i = 4; i < 8; i++) {
+        if (sid[i] < '0' || sid[i] > '9') return 0;
+    }
+    return 1;
+}
+
+int SIDExistsInSudoku(FILE *fSudoku, const char *sid) {
+    char line[LINE_MAX];
+    char buf[LINE_MAX];
+    char *fld[MAX_FIELDS];
+    int n;
+    int i;
+
+    if (!fSudoku || !sid || !*sid) return 0;
+    rewind(fSudoku);
+
+    while (fgets(line, sizeof(line), fSudoku)) {
+        chomp(line);
+        if (!line[0]) continue;
+
+        strncpy(buf, line, sizeof(buf));
+        buf[sizeof(buf) - 1] = '\0';
+
+        for (i = 0; i < MAX_FIELDS; i++) fld[i] = NULL;
+        n = splitHashInplace(buf, fld, MAX_FIELDS);
+
+        for (i = 0; i < n; ++i) {
+            if (fld[i] && strcmp(fld[i], sid) == 0) return 1;
+        }
+    }
+    return 0;
+}
+
+int cmpHitemGID(const void *a, const void *b) {
+    const HItem *x = (const HItem*)a;
+    const HItem *y = (const HItem*)b;
+
+    return strcmp(x -> gid, y -> gid);
+}
+
+void toUpperASCII(char *s) {
+    for (; *s; ++s) {
+        if (*s >= 'a' && *s <= 'z') *s = (char)(*s - 'a' + 'A');
+    }
+}
+
+static int isGIDOk(const char *s) {
+    return s && strlen(s)==7 && s[0]=='G' && s[1]=='I' && s[2]=='D' && (s[3]>='a' && s[3]<='z') && isdigit((unsigned char)s[4]) && isdigit((unsigned char)s[5]) && isdigit((unsigned char)s[6]);
+}
+
+static int isPIDOk(const char *s) {
+    return s && strlen(s)==9 && s[0]=='P' && s[1]=='I' && s[2]=='D' && ( (s[3]>='a' && s[3]<='z') || (s[3]>='A' && s[3]<='Z') ) && isdigit((unsigned char)s[4]) && isdigit((unsigned char)s[5]) && isdigit((unsigned char)s[6]) && isdigit((unsigned char)s[7]) && isdigit((unsigned char)s[8]);
+}
+
+int isSIDOk(const char *s) {
+    return s && strlen(s)==8 && s[0]=='S' && s[1]=='I' && s[2]=='D' && (s[3]>='A' && s[3]<='Z') && isdigit((unsigned char)s[4]) && isdigit((unsigned char)s[5]) && isdigit((unsigned char)s[6]) && isdigit((unsigned char)s[7]);
+}
+
+int isYYYYMMDDOk(int d) {
+    int y, m, day;
+
+    if (d < 10101) return 0;
+
+    y = d / 10000;
+    m = (d / 100) % 100;
+    day = d % 100;
+
+    if (m < 1 || m > 12) return 0;
+    if (day < 1 || day > 31) return 0;
+    return 1;
+}
+
+int readline(char *buf, size_t n) {
+    if (!fgets(buf, n, stdin)) return 0;
+    chomp(buf);
+
+    return 1;
 }
 
 // n
@@ -282,21 +370,21 @@ int q(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions, char ***solut
 
     for (;;) {
         if (!readline(gid, sizeof(gid))) return 0;
-        if (is_gid_ok(gid)) break;
+        if (isGIDOk(gid)) break;
         printf("Q: nespravny format vstupu, zadaj znova: ");
         fflush(stdout);
     }
 
     for (;;) {
         if (!readline(pid, sizeof(pid))) return 0;
-        if (is_pid_ok(pid)) break;
+        if (isPIDOk(pid)) break;
         printf("Q: nespravny format vstupu, zadaj znova: ");
         fflush(stdout);
     }
 
     for (;;) {
         if (!readline(sid, sizeof(sid))) return 0;
-        if (is_sid_ok(sid)) break;
+        if (isSIDOk(sid)) break;
 
         printf("Q: nespravny format vstupu, zadaj znova: ");
         fflush(stdout);
@@ -312,7 +400,7 @@ int q(FILE **fileSudoku, FILE **filePlayers, FILE **fileSolutions, char ***solut
         if (!readline(nums, sizeof(nums))) return 0;
 
         if (sscanf(nums, "%d %d %d", &ymd, &mm, &ss) == 3) {
-            if (is_yyyymmdd_ok(ymd) && mm >= 0 && ss >= 0 && ss <= 59) {
+            if (isYYYYMMDDOk(ymd) && mm >= 0 && ss >= 0 && ss <= 59) {
                 datei = ymd; mini = mm; seci = ss;
 
                 break;
@@ -683,61 +771,6 @@ void v(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud, const char *fnP
     }
 }
 
-
-int isValidSIDFormat(const char *sid) {
-    int i;
-
-    if (!sid) return 0;
-    if (strlen(sid) != 8) return 0;
-    if (sid[0] != 'S' || sid[1] != 'I' || sid[2] != 'D') return 0;
-    if (sid[3] < 'A' || sid[3] > 'Z') return 0;
-
-    for (i = 4; i < 8; i++) {
-        if (sid[i] < '0' || sid[i] > '9') return 0;
-    }
-    return 1;
-}
-
-int SIDExistsInSudoku(FILE *fSudoku, const char *sid) {
-    char line[LINE_MAX];
-    char buf[LINE_MAX];
-    char *fld[MAX_FIELDS];
-    int n;
-    int i;
-
-    if (!fSudoku || !sid || !*sid) return 0;
-    rewind(fSudoku);
-
-    while (fgets(line, sizeof(line), fSudoku)) {
-        chomp(line);
-        if (!line[0]) continue;
-
-        strncpy(buf, line, sizeof(buf));
-        buf[sizeof(buf) - 1] = '\0';
-
-        for (i = 0; i < MAX_FIELDS; i++) fld[i] = NULL;
-        n = splitHashInplace(buf, fld, MAX_FIELDS);
-
-        for (i = 0; i < n; ++i) {
-            if (fld[i] && strcmp(fld[i], sid) == 0) return 1;
-        }
-    }
-    return 0;
-}
-
-int cmpHitemGID(const void *a, const void *b) {
-    const HItem *x = (const HItem*)a;
-    const HItem *y = (const HItem*)b;
-
-    return strcmp(x -> gid, y -> gid);
-}
-
-void toUpperASCII(char *s) {
-    for (; *s; ++s) {
-        if (*s >= 'a' && *s <= 'z') *s = (char)(*s - 'a' + 'A');
-    }
-}
-
 //h
 int cmd_h(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions, const char *fnSudoku, const char *fnPlayers, const char *fnSolutions, const char *sid_input_line) {
     char sid[32];
@@ -862,6 +895,8 @@ int readNextNonemptyLine(char *buf, size_t bufsz) {
 
 // ine
 void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud, const char *fnPlr, const char *fnSol) {
+    char **sudokuArr = NULL, **playersArr = NULL, **solutionsArr = NULL;
+    int sudokuCnt = 0, playersCnt = 0, solutionsCnt = 0;
     char cmdline[256];
     char c;
     int choice;
@@ -893,6 +928,33 @@ void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud,
             }
             cmd_h(fSud, fPlr, fSol, fnSud, fnPlr, fnSol, sidline);
             continue;
+        }
+
+        if (sscanf(cmdline, " %c", &c) == 1 && (c == 'n' || c == 'N')) {
+            n(fSud, fPlr, fSol, &sudokuArr, &sudokuCnt, &playersArr, &playersCnt, &solutionsArr, &solutionsCnt);
+            continue;
+        }
+
+        if (sscanf(cmdline, " %c", &c) == 1 && (c == 'q' || c == 'Q')) {
+            q(fSud, fPlr, fSol, &solutionsArr, &solutionsCnt);
+            continue;
+        }
+
+
+        if (sudokuArr) {
+            int i;
+            for (i = 0; i < sudokuCnt; ++i) free(sudokuArr[i]);
+            free(sudokuArr);
+        }
+        if (playersArr) {
+            int i;
+            for (i = 0; i < playersCnt; ++i) free(playersArr[i]);
+            free(playersArr);
+        }
+        if (solutionsArr) {
+            int i;
+            for (i = 0; i < solutionsCnt; ++i) free(solutionsArr[i]);
+            free(solutionsArr);
         }
     }
 }
