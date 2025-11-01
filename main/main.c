@@ -7,11 +7,6 @@
 #define MAX_FIELDS 16
 #define SAMPLE_LIMIT 10
 
-typedef struct {
-    char gid[64];
-    char line[LINE_MAX];
-} HItem;
-
 // Support functions
 
 char *dupstr(const char *s) {
@@ -123,13 +118,6 @@ int SIDExistsInSudoku(FILE *fSudoku, const char *sid) {
     return 0;
 }
 
-int cmpHitemGID(const void *a, const void *b) {
-    const HItem *x = (const HItem*)a;
-    const HItem *y = (const HItem*)b;
-
-    return strcmp(x -> gid, y -> gid);
-}
-
 void toUpperASCII(char *s) {
     for (; *s; ++s) {
         if (*s >= 'a' && *s <= 'z') *s = (char)(*s - 'a' + 'A');
@@ -184,6 +172,32 @@ int nextRand(int *seed) {
     *seed = (int)(s & 0x7FFFFFFF);
 
     return (*seed >> 16) & 0x7FFF;
+}
+
+int cmp_line_by_gid(const void *pa, const void *pb) {
+    const char *sa = *(const char * const *)pa;
+    const char *sb = *(const char * const *)pb;
+    char ga[64], gb[64];
+    int i;
+
+    i = 0; 
+    
+    while (sa[i] && sa[i] != '#' && i < (int)sizeof(ga)-1) {
+        ga[i] = sa[i];
+        i++;
+    }
+
+    ga[i] = '\0';
+    i = 0;
+
+    while (sb[i] && sb[i] != '#' && i < (int)sizeof(gb)-1) {
+        gb[i] = sb[i];
+        i++;
+    }
+
+    gb[i] = '\0';
+
+    return strcmp(ga, gb);
 }
 
 int loadSudoku81(FILE *fSudoku, const char *sid, char out81[82]) {
@@ -1036,26 +1050,26 @@ void v(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud, const char *fnP
 //h
 int cmd_h(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions, const char *fnSudoku, const char *fnPlayers, const char *fnSolutions, const char *sid_input_line) {
     char sid[32];
-    char lineS[LINE_MAX];
-    char tmp[LINE_MAX];
-    char *sf[MAX_FIELDS];
+    char lineS[LINE_MAX], tmp[LINE_MAX], *sf[MAX_FIELDS];
     char sid_s_norm[32];
-    const char *gid;
-    int ns;
-    int i;
-
-    HItem *arr = NULL;
-
-    size_t n = 0, cap = 0;
-
+    char **rows = NULL;
+    int n = 0, cap = 0; 
+    int ns, i;
     FILE *fo;
-    HItem *tmpArr;
 
     (void)fPlayers;
     (void)fnPlayers;
 
-    if (*fSudoku == NULL) *fSudoku = fopen(fnSudoku, "r");
-    if (*fSolutions == NULL) *fSolutions = fopen(fnSolutions, "r");
+    {
+        if (*fSudoku == NULL) {
+            *fSudoku = fopen(fnSudoku, "r");
+        }
+        
+        if (*fSolutions == NULL) {
+            *fSolutions = fopen(fnSolutions, "r");
+        }
+    }
+
     if (*fSudoku == NULL || *fSolutions == NULL) {
         printf("H: Neotvoreny txt subor.\n");
 
@@ -1063,11 +1077,14 @@ int cmd_h(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions, const char *fnSudo
     }
 
     strncpy(sid, sid_input_line, sizeof(sid));
-    sid[sizeof(sid) - 1] = '\0';
+
+    sid[sizeof(sid)-1] = '\0';
+
     chomp(sid);
 
     if (!isValidSIDFormat(sid) || !SIDExistsInSudoku(*fSudoku, sid)) {
         printf("H: Nespravny vstup.\n");
+
         return 0;
     }
 
@@ -1075,75 +1092,125 @@ int cmd_h(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions, const char *fnSudo
 
     while (fgets(lineS, sizeof(lineS), *fSolutions)) {
         chomp(lineS);
-        if (lineS[0] == '\0') continue;
+
+        if (lineS[0] == '\0') {
+            continue;
+        }
 
         strncpy(tmp, lineS, sizeof(tmp));
-        tmp[sizeof(tmp) - 1] = '\0';
+        tmp[sizeof(tmp)-1] = '\0';
 
-        for (i = 0; i < MAX_FIELDS; i++) sf[i] = NULL;
+        for (i = 0; i < MAX_FIELDS; i++) {
+            sf[i] = NULL;
+        }
+
         ns = splitHashInplace(tmp, sf, MAX_FIELDS);
+
         sid_s_norm[0] = '\0';
 
         for (i = 0; i < ns; i++) {
-            if (sf[i] == NULL || sf[i][0] == '\0') continue;
+            if (sf[i] == NULL || sf[i][0] == '\0') {
+                continue;
+            }
+
             {
                 char candidate[32];
 
                 strncpy(candidate, sf[i], sizeof(candidate));
-
-                candidate[sizeof(candidate) - 1] = '\0';
-
+                candidate[sizeof(candidate)-1] = '\0';
                 trimSpaces(candidate);
-
                 toUpperASCII(candidate);
 
                 if (strlen(candidate) == 8 && strncmp(candidate, "SID", 3) == 0) {
                     strcpy(sid_s_norm, candidate);
+
                     break;
                 }
             }
         }
 
-        if (sid_s_norm[0] == '\0') continue;
-        if (strcmp(sid_s_norm, sid) != 0) continue;
-
-        gid = (ns >= 1) ? sf[0] : "";
-
-        if (n == cap) {
-            cap = cap ? cap * 2 : 64;
-            tmpArr = (HItem*)realloc(arr, cap * sizeof(HItem));
-            if (!tmpArr) {
-                free(arr);
-                printf("H: Neotvoreny txt subor.\n");
-                return 0;
-            }
-            arr = tmpArr;
+        if (sid_s_norm[0] == '\0') {
+            continue; 
         }
 
-        strncpy(arr[n].gid, gid, sizeof(arr[n].gid));
-        arr[n].gid[sizeof(arr[n].gid) - 1] = '\0';
-        strncpy(arr[n].line, lineS, sizeof(arr[n].line));
-        arr[n].line[sizeof(arr[n].line) - 1] = '\0';
+        if (strcmp(sid_s_norm, sid) != 0) {
+            continue;
+        }
+
+        if (n == cap) {
+            int newCap = (cap == 0) ? 64 : (cap * 2);
+            char **tmpArr = (char**)realloc(rows, newCap * sizeof(char*));
+
+            if (!tmpArr) {
+                int k;
+
+                for (k = 0; k < n; ++k) {
+                    free(rows[k]);
+                }
+
+                free(rows);
+
+                printf("H: Neotvoreny txt subor.\n");
+
+                return 0;
+            }
+            rows = tmpArr;
+            cap = newCap;
+        }
+
+        rows[n] = dupstr(lineS);
+
+        if (!rows[n]) {
+            int k;
+
+            for (k = 0; k < n; ++k) {
+                free(rows[k]);
+            }
+
+            free(rows);
+
+            printf("H: Neotvoreny txt subor.\n");
+
+            return 0;
+        }
+
         n++;
     }
 
-    if (n > 1) qsort(arr, n, sizeof(HItem), cmpHitemGID);
-
-    fo = fopen("Vystup_H.txt", "w");
-    if (!fo) {
-        free(arr);
-        printf("H: Neotvoreny txt subor.\n");
-        return 0;
+    if (n > 1) {
+        qsort(rows, (size_t)n, sizeof(char*), cmp_line_by_gid);
     }
 
-    for (i = 0; i < (int)n; ++i) {
-        fputs(arr[i].line, fo);
+    fo = fopen("Vystup_H.txt", "w");
+
+    if (!fo) {
+        int k;
+
+        for (k = 0; k < n; ++k) {
+            free(rows[k]);
+        }
+
+        free(rows);
+
+        printf("H: Neotvoreny txt subor.\n");
+
+        return 0;
+    }
+    for (i = 0; i < n; ++i) {
+        fputs(rows[i], fo);
         fputc('\n', fo);
     }
 
     fclose(fo);
-    free(arr);
+
+    for (i = 0; i < n; ++i) {
+        free(rows[i]);
+    }
+
+    free(rows);
+
     printf("H: Uspešne vytvoreny sumar.\n");
+
     return 0;
 }
 
