@@ -373,6 +373,93 @@ int writeBoardPipes(const char grid[9][10], const char *outname) {
 
 //Main functions
 
+//k
+void cmd_k(FILE **fSud, FILE **fPlr, FILE **fSol, char ***pSudokuArr, int *pSudokuCnt, char ***pPlayersArr, int *pPlayersCnt, char ***pSolutionsArr, int *pSolutionsCnt, MNode **pHead) {
+    int i;
+    char **arr;
+
+    MNode *cur, *next;
+
+    if (pSudokuArr != NULL && *pSudokuArr != NULL) {
+        arr = *pSudokuArr;
+
+        for (i = 0; i < *pSudokuCnt; i++) {
+            if (arr[i] != NULL) {
+                free(arr[i]);
+            }
+        }
+
+        free(arr);
+        *pSudokuArr = NULL;
+
+        if (pSudokuCnt) {
+            *pSudokuCnt = 0;
+        }
+    }
+
+    if (pPlayersArr != NULL && *pPlayersArr != NULL) {
+        arr = *pPlayersArr;
+
+        for (i = 0; i < *pPlayersCnt; i++) {
+            if (arr[i] != NULL) {
+                free(arr[i]);
+            }
+        }
+
+        free(arr);
+        *pPlayersArr = NULL;
+
+        if (pPlayersCnt) {
+            *pPlayersCnt = 0;
+        }
+    }
+
+    if (pSolutionsArr != NULL && *pSolutionsArr != NULL) {
+        arr = *pSolutionsArr;
+
+        for (i = 0; i < *pSolutionsCnt; i++) {
+            if (arr[i] != NULL) {
+                free(arr[i]);
+            }
+        }
+
+        free(arr);
+        *pSolutionsArr = NULL;
+
+        if (pSolutionsCnt) {
+            *pSolutionsCnt = 0;
+        }
+    }
+
+    if (pHead != NULL && *pHead != NULL) {
+        cur = *pHead;
+
+        while (cur != NULL) {
+            next = cur->next;
+
+            free(cur);
+
+            cur = next;
+        }
+        *pHead = NULL;
+    }
+
+    if (fSud != NULL && *fSud != NULL) {
+        fclose(*fSud);
+        *fSud = NULL;
+    }
+    if (fPlr != NULL && *fPlr != NULL) {
+        fclose(*fPlr);
+        *fPlr = NULL;
+    }
+    if (fSol != NULL && *fSol != NULL) {
+        fclose(*fSol);
+        *fSol = NULL;
+    }
+
+    exit(0);
+}
+
 //d
 void cmd_d(MNode **pHead) {
     MNode *i, *j;
@@ -1824,7 +1911,7 @@ int cmd_h(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions, const char *fnSudo
 }
 
 // ine
-void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud, const char *fnPlr, const char *fnSol, MNode **pHead) {
+void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, char *fnSud, char *fnPlr, char *fnSol, char ***pSudokuArr, int *pSudokuCnt, char ***pPlayersArr, int *pPlayersCnt, char ***pSolutionsArr, int *pSolutionsCnt, MNode **pHead) {
     char **sudokuArr = NULL;
     char **playersArr = NULL;
     char **solutionsArr= NULL;
@@ -1848,7 +1935,7 @@ void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud,
         choice = -1;
         memset(sidline, 0, sizeof(sidline));
 
-        if (sscanf(cmdline, " %c %d", &c, &choice) == 2 && (c=='v' || c=='V')) {
+        if (sscanf(cmdline, " %c %d", &c, &choice) == 2 && (c == 'v' || c == 'V')) {
             switch (choice) {
                 case 1:
                     v1(fSud, fPlr, fSol, fnSud, fnPlr, fnSol);
@@ -1955,6 +2042,10 @@ void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud,
             continue;
         }
 
+        if (sscanf(cmdline, " %c", &c) == 1 && (c == 'k' || c == 'K')) {
+            cmd_k(fSud, fPlr, fSol, pSudokuArr, pSudokuCnt, pPlayersArr, pPlayersCnt, pSolutionsArr,pSolutionsCnt, pHead);
+        }
+
     }
 
     if (sudokuArr) {
@@ -1973,28 +2064,20 @@ void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud,
 
 
 
-int main(void) {
-    FILE *f1 = NULL, *f2 = NULL, *f3 = NULL;
+int main(void)
+{
+    FILE *fSud = NULL, *fPlr = NULL, *fSol = NULL;
 
-    char *fname1 = "./Sudoku.txt";
-    char *fname2 = "./RegisterHracov.txt";
-    char *fname3 = "./RegisterRieseni.txt";
+    char **sudokuArr = NULL;
+    char **playersArr = NULL;
+    char **solutionsArr = NULL;
+    int sudokuCnt = 0;
+    int playersCnt = 0;
+    int solutionsCnt = 0;
 
-    MNode *head = NULL;
+    MNode *head = NULL;  
 
-    handleCommandLoop(&f1, &f2, &f3, fname1, fname2, fname3, &head);
-
-    if (f1 != NULL) fclose(f1);
-    if (f2 != NULL) fclose(f2);
-    if (f3 != NULL) fclose(f3);
-
-    
-    MNode *tmp;
-    while (head != NULL) {
-        tmp = head->next;
-        free(head);
-        head = tmp;
-    }
+    handleCommandLoop(&fSud, &fPlr, &fSol, "Sudoku.txt", "RegisterHracov.txt", "RegisterRieseni.txt", &sudokuArr, &sudokuCnt, &playersArr, &playersCnt, &solutionsArr, &solutionsCnt, &head);
 
     return 0;
 }
