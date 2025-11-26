@@ -373,6 +373,241 @@ int writeBoardPipes(const char grid[9][10], const char *outname) {
 
 //Main functions
 
+//d
+void cmd_d(MNode **pHead) {
+    MNode *i, *j;
+    MResult tmpRes;
+    int swapped;
+
+    if (*pHead == NULL) {
+        return;
+    }
+
+    i = *pHead;
+
+    while (i != NULL) {
+        do {
+            swapped = 0;
+            j = *pHead;
+
+            while (j != NULL && j->next != NULL) {
+
+                if (strcmp(j->player.PID, i->player.PID) == 0 &&
+                    strcmp(j->next->player.PID, i->player.PID) == 0) 
+                {
+                    if (j->result.Trvanie > j->next->result.Trvanie) {
+
+                        tmpRes = j->result;
+                        j->result = j->next->result;
+                        j->next->result = tmpRes;
+
+                        swapped = 1;
+                    }
+                }
+
+                j = j->next;
+            }
+        } while (swapped);
+
+        i = i->next;
+    }
+}
+
+//s
+void cmd_s(MNode **pHead) {
+    char gid[32];
+    int removed = 0;
+
+    MNode *cur;
+    MNode *prev;
+    MNode *tmp;
+
+    if (*pHead == NULL) {
+        printf("S: Spajany zoznam nie je vytvoreny.\n");
+
+        return;
+    }
+
+    if (!fgets(gid, sizeof(gid), stdin)) {
+        printf("S: Nespravny vstup.\n");
+
+        return;
+    }
+
+    chomp(gid);
+
+    while (*pHead != NULL && strcmp((*pHead)->result.GID, gid) == 0) {
+        tmp = *pHead;
+        *pHead = (*pHead)->next;
+
+        free(tmp);
+
+        removed++;
+    }
+
+    prev = *pHead;
+
+    if (prev != NULL) {
+        cur = prev->next;
+    } else {
+        cur = NULL;
+    }
+
+    while (cur != NULL) {
+        if (strcmp(cur->result.GID, gid) == 0) {
+            tmp = cur;
+            prev->next = cur->next;
+            cur = cur->next;
+
+            free(tmp);
+
+            removed++;
+        } else {
+            prev = cur;
+            cur = cur->next;
+        }
+    }
+
+    printf("S: Vymazalo sa : %d zaznamov !\n", removed);
+}
+
+//a
+int cmd_a(MNode **pHead) {
+    char line[256];
+    int Y;
+    char pidNew[16];
+    char meno[64];
+    char krajina[64];
+    char rokStr[32];
+    int rok;
+    int maxA = 0;
+    int num;
+    int pos;
+
+    MNode *cur;
+    MNode *node;
+    MNode *prev;
+
+    if (fgets(line, sizeof(line), stdin) == NULL) {
+        printf("A: Nespravny vstup.\n");
+
+        return 0;
+    }
+
+    chomp(line);
+
+    if (sscanf(line, "%d", &Y) != 1) {
+        printf("A: Nespravny vstup.\n");
+
+        return 0;
+    }
+
+    if (fgets(line, sizeof(line), stdin) == NULL) {
+        printf("A: Nespravny vstup.\n");
+
+        return 0;
+    }
+
+    chomp(line);
+
+    if (fgets(meno, sizeof(meno), stdin) == NULL) {
+        printf("A: Nespravny vstup.\n");
+        
+        return 0;
+    }
+
+    chomp(meno);
+
+    if (fgets(krajina, sizeof(krajina), stdin) == NULL) {
+        printf("A: Nespravny vstup.\n");
+
+        return 0;
+    }
+
+    chomp(krajina);
+
+    if (fgets(rokStr, sizeof(rokStr), stdin) == NULL) {
+        printf("A: Nespravny vstup.\n");
+
+        return 0;
+    }
+
+    chomp(rokStr);
+    rok = atoi(rokStr);
+    cur = *pHead;
+
+    while (cur != NULL) {
+        if (strcmp(cur->player.Identita, meno) == 0 && cur->player.RokNar == rok) {
+            printf("A: Duplicita zaznamu.\n");
+
+            return 0;
+        }
+        cur = cur->next;
+    }
+
+    cur = *pHead;
+
+    while (cur != NULL) {
+        if (strncmp(cur->player.PID, "PIDa", 4) == 0) {
+            num = atoi(cur->player.PID + 4);
+
+            if (num > maxA) {
+                maxA = num;
+            }
+        }
+        cur = cur->next;
+    }
+
+    num = maxA + 1;
+    sprintf(pidNew, "PIDa%05d", num);
+
+    node = (MNode*)malloc(sizeof(MNode));
+
+    if (node == NULL) {
+        printf("A: Nepodarilo sa alokovat pamat.\n");
+        return 0;
+    }
+
+    strcpy(node->player.PID, pidNew);
+    strcpy(node->player.Identita, meno);
+    strcpy(node->player.Krajina, krajina);
+
+    node->player.RokNar = rok;
+
+    node->result.SID[0] = '\0';
+    node->result.NarHry = 0;
+    node->result.GID[0] = '\0';
+    node->result.NarSut = 0;
+    node->result.DatHry[0] = '\0';
+    node->result.Trvanie = 0;
+
+    node->next = NULL;
+
+    if (Y <= 1 || *pHead == NULL) {
+        node->next = *pHead;
+        *pHead = node;
+        pos = 1;
+    } else {
+        prev = NULL;
+        cur  = *pHead;
+        pos  = 1;
+
+        while (cur != NULL && pos < Y) {
+            prev = cur;
+            cur  = cur->next;
+            pos++;
+        }
+
+        prev->next = node;
+        node->next = cur;
+    }
+
+    printf("A: Uspesne pridany zaznam na pozicii %d.\n", pos);
+
+    return 0;
+}
+
+
 //m
 int cmd_m(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions,  const char *fnSudoku, const char *fnPlayers, const char *fnSolutions, MNode **pHeadM) {
     char lineP[LINE_MAX];
@@ -1335,8 +1570,72 @@ int v2(char **playersArr, int playersCnt, char **solutionsArr, int solutionsCnt)
     return 0;
 }
 
+// v3
+void v3(MNode *head) {
+    MNode *p, *q;
+    int firstPrinted;
+
+    if (head == NULL) {
+        printf("V3: Nenaplneny spajany zoznam.\n");
+
+        return;
+    }
+
+    p = head;
+
+    while (p != NULL) {
+        int alreadySeen = 0;
+
+        q = head;
+
+        while (q != p) {
+            if (strcmp(q->player.PID, p->player.PID) == 0) {
+                alreadySeen = 1;
+
+                break;
+            }
+            q = q->next;
+        }
+
+        if (alreadySeen) {
+            p = p->next;
+
+            continue;
+        }
+
+        printf("PID: %s\n", p->player.PID);
+        printf("Identita: %s\n", p->player.Identita);
+        printf("Krajina: %s\n", p->player.Krajina);
+        printf("RokNar: %d\n", p->player.RokNar);
+        printf("Vysledky:\n");
+
+        firstPrinted = 0;
+        q = head;
+
+        while (q != NULL) {
+            if (strcmp(q->player.PID, p->player.PID) == 0) {
+                if (q->result.SID[0] != '\0') {
+                    printf("\t%s / %c / %s / %c / %s / %d\n",
+                           q->result.SID,
+                           q->result.NarHry ? q->result.NarHry : ' ',
+                           q->result.GID,
+                           q->result.NarSut ? q->result.NarSut : ' ',
+                           q->result.DatHry,
+                           q->result.Trvanie);
+                    firstPrinted = 1;
+                }
+            }
+            q = q->next;
+        }
+
+        printf("\n");
+
+        p = p->next;
+    }
+}
+
 // v
-void v(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud, const char *fnPlr, const char *fnSol, int choice, char **playersArr, int playersCnt, char **solutionsArr, int solutionsCnt) {
+void v(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud, const char *fnPlr, const char *fnSol, int choice, char **playersArr, int playersCnt, char **solutionsArr, int solutionsCnt, MNode *head) {
     switch (choice) {
         case 1:
             v1(fSud, fPlr, fSol, fnSud, fnPlr, fnSol);
@@ -1347,7 +1646,7 @@ void v(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud, const char *fnP
             break;
 
         case 3:
-            printf("V3: Funkcia este nie je implementovana.\n");
+            v3(head);
             break;
 
         default:
@@ -1364,6 +1663,7 @@ int cmd_h(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions, const char *fnSudo
     char **rows = NULL;
     int n = 0, cap = 0; 
     int ns, i;
+
     FILE *fo;
 
     (void)fPlayers;
@@ -1524,7 +1824,7 @@ int cmd_h(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions, const char *fnSudo
 }
 
 // ine
-void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud, const char *fnPlr, const char *fnSol) {
+void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud, const char *fnPlr, const char *fnSol, MNode **pHead) {
     char **sudokuArr = NULL;
     char **playersArr = NULL;
     char **solutionsArr= NULL;
@@ -1541,6 +1841,7 @@ void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud,
 
     while (fgets(cmdline, sizeof(cmdline), stdin)) {
         chomp(cmdline);
+
         if (cmdline[0] == '\0') continue;
 
         c = 0;
@@ -1552,9 +1853,15 @@ void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud,
                 case 1:
                     v1(fSud, fPlr, fSol, fnSud, fnPlr, fnSol);
                     break;
+
                 case 2:
                     v2(playersArr, playersCnt, solutionsArr, solutionsCnt);
                     break;
+
+                case 3:
+                    v3(*pHead);
+                    break;
+
                 default:
                     printf("V: Nespravna volba vypisu.\n");
                     break;
@@ -1580,9 +1887,9 @@ void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud,
             continue;
         }
 
-        if (sscanf(cmdline, " %c", &c) == 1 && (c=='n' || c=='N')) {
+        if (sscanf(cmdline, " %c", &c) == 1 && (c == 'n' || c == 'N')) {
             if (cmd_n(fSud, fPlr, fSol, fnSud, fnPlr, fnSol, &playersArr, &playersCnt, &solutionsArr, &solutionsCnt)) {
-                printf(" ");
+                printf("");
             }
 
             continue;
@@ -1598,29 +1905,12 @@ void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud,
             continue;
         }
 
-
-        if (sudokuArr) {
-            int i;
-            for (i = 0; i < sudokuCnt; ++i) free(sudokuArr[i]);
-            free(sudokuArr);
-        }
-        if (playersArr) {
-            int i;
-            for (i = 0; i < playersCnt; ++i) free(playersArr[i]);
-            free(playersArr);
-        }
-        if (solutionsArr) {
-            int i;
-            for (i = 0; i < solutionsCnt; ++i) free(solutionsArr[i]);
-            free(solutionsArr);
-        }
-
-        if (sscanf(cmdline, " %c %127s %d", &c, sidline, &choice) == 3 && (c=='e' || c=='E')) {
+        if (sscanf(cmdline, " %c %127s %d", &c, sidline, &choice) == 3 && (c == 'e' || c == 'E')) {
             cmd_e(fSud, fnSud, sidline, choice);
             continue;
         }
 
-        if (sscanf(cmdline, " %c", &c) == 1 && (c=='e' || c=='E')) {
+        if (sscanf(cmdline, " %c", &c) == 1 && (c == 'e' || c == 'E')) {
             char line2[256];
             char sidbuf[128];
             char xbuf[64];
@@ -1646,9 +1936,38 @@ void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud,
         }
 
         if (sscanf(cmdline, " %c", &c) == 1 && (c == 'm' || c == 'M')) {
-            cmd_m(fSud, fPlr, fSol, fnSud, fnPlr, fnSol, &mHead);
+            cmd_m(fSud, fPlr, fSol, fnSud, fnPlr, fnSol, pHead);
             continue;
         }
+
+        if (sscanf(cmdline, " %c", &c) == 1 && (c == 'a' || c == 'A')) {
+            cmd_a(pHead);
+            continue;
+        }
+
+        if (sscanf(cmdline, " %c", &c) == 1 && (c == 's' || c == 'S')) {
+            cmd_s(pHead);
+            continue;
+        }
+
+        if (sscanf(cmdline, " %c", &c) == 1 && (c == 'd' || c == 'D')) {
+            cmd_d(pHead);
+            continue;
+        }
+
+    }
+
+    if (sudokuArr) {
+        for (int i = 0; i < sudokuCnt; i++) free(sudokuArr[i]);
+        free(sudokuArr);
+    }
+    if (playersArr) {
+        for (int i = 0; i < playersCnt; i++) free(playersArr[i]);
+        free(playersArr);
+    }
+    if (solutionsArr) {
+        for (int i = 0; i < solutionsCnt; i++) free(solutionsArr[i]);
+        free(solutionsArr);
     }
 }
 
@@ -1656,15 +1975,26 @@ void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud,
 
 int main(void) {
     FILE *f1 = NULL, *f2 = NULL, *f3 = NULL;
+
     char *fname1 = "./Sudoku.txt";
     char *fname2 = "./RegisterHracov.txt";
     char *fname3 = "./RegisterRieseni.txt";
 
-    handleCommandLoop(&f1, &f2, &f3, fname1, fname2, fname3);
+    MNode *head = NULL;
+
+    handleCommandLoop(&f1, &f2, &f3, fname1, fname2, fname3, &head);
 
     if (f1 != NULL) fclose(f1);
     if (f2 != NULL) fclose(f2);
     if (f3 != NULL) fclose(f3);
+
+    
+    MNode *tmp;
+    while (head != NULL) {
+        tmp = head->next;
+        free(head);
+        head = tmp;
+    }
 
     return 0;
 }
