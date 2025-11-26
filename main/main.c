@@ -7,6 +7,30 @@
 #define MAX_FIELDS 16
 #define SAMPLE_LIMIT 10
 
+// Sturctures
+
+typedef struct {
+    char PID[32];
+    char Identita[128];
+    char Krajina[64];
+    int  RokNar;
+} MPlayer;
+
+typedef struct {
+    char SID[32];
+    char NarHry;
+    char GID[32];
+    char NarSut;
+    char DatHry[9];
+    int  Trvanie;
+} MResult;
+
+typedef struct MNode {
+    MPlayer player;
+    MResult result;
+    struct MNode *next;
+} MNode;
+
 // Support functions
 
 char *dupstr(const char *s) {
@@ -348,6 +372,291 @@ int writeBoardPipes(const char grid[9][10], const char *outname) {
 }
 
 //Main functions
+
+//m
+int cmd_m(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions,  const char *fnSudoku, const char *fnPlayers, const char *fnSolutions, MNode **pHeadM) {
+    char lineP[LINE_MAX];
+    char bufP[LINE_MAX];
+    char *pf[MAX_FIELDS];
+    int nf;
+    int i;
+    char lineS[LINE_MAX];
+    char bufS[LINE_MAX];
+    char *sf[MAX_FIELDS];
+    int ns;
+    int playersCnt = 0;
+    int playersCap = 0;
+    int found;
+    int nRecords = 0;
+
+    MPlayer *players = NULL;
+    MNode *head = NULL;
+    MNode *tail = NULL;
+    MNode *cur;
+    MNode *next;
+    MNode *node;
+
+    FILE *fp;
+
+    if (*fSudoku == NULL || *fPlayers == NULL || *fSolutions == NULL) {
+        printf("M: Neotvoreny subor.\n");
+
+        return 0;
+    }
+
+    cur = *pHeadM;
+
+    while (cur != NULL) {
+        next = cur->next;
+        free(cur);
+        cur = next;
+    }
+
+    *pHeadM = NULL;
+    fp = *fPlayers;
+    rewind(fp);
+
+    while (fgets(lineP, sizeof(lineP), fp)) {
+        MPlayer pl;
+
+        chomp(lineP);
+
+        if (lineP[0] == '\0') {
+            continue;
+        }
+
+        strncpy(bufP, lineP, sizeof(bufP));
+        bufP[sizeof(bufP) - 1] = '\0';
+
+        for (i = 0; i < MAX_FIELDS; ++i) {
+            pf[i] = NULL;
+        }
+
+        nf = splitHashInplace(bufP, pf, MAX_FIELDS);
+
+        memset(&pl, 0, sizeof(MPlayer));
+
+        if (nf >= 1 && pf[0]) {
+            strncpy(pl.PID, pf[0], sizeof(pl.PID));
+            pl.PID[sizeof(pl.PID) - 1] = '\0';
+        }
+        if (nf >= 2 && pf[1]) {
+            strncpy(pl.Identita, pf[1], sizeof(pl.Identita));
+            pl.Identita[sizeof(pl.Identita) - 1] = '\0';
+        }
+        if (nf >= 3 && pf[2]) {
+            strncpy(pl.Krajina, pf[2], sizeof(pl.Krajina));
+            pl.Krajina[sizeof(pl.Krajina) - 1] = '\0';
+        }
+        if (nf >= 4 && pf[3]) {
+            pl.RokNar = atoi(pf[3]);
+        } else {
+            pl.RokNar = 0;
+        }
+
+        if (playersCnt == playersCap) {
+            int newCap = (playersCap == 0) ? 8 : playersCap * 2;
+
+            MPlayer *tmpPlayers = (MPlayer*)realloc(players, newCap * sizeof(MPlayer));
+
+            if (tmpPlayers == NULL) {
+                free(players);
+                printf("M: Neotvoreny subor.\n");
+
+                return 0;
+            }
+            players = tmpPlayers;
+            playersCap = newCap;
+        }
+        players[playersCnt++] = pl;
+    }
+
+
+    fp = *fSolutions;
+    rewind(fp);
+
+    while (fgets(lineS, sizeof(lineS), fp)) {
+        char gid[64] = "";
+        char pid[64] = "";
+        char sid[32] = "";
+        char date[16] = "";
+        char mins[16] = "";
+        char secs[16] = "";
+        int seconds = 0;
+        int last = -1;
+        int prev = -1;
+
+        MPlayer plFound;
+        MResult res;
+
+        chomp(lineS);
+
+        if (lineS[0] == '\0') {
+            continue;
+        }
+
+        strncpy(bufS, lineS, sizeof(bufS));
+        bufS[sizeof(bufS) - 1] = '\0';
+
+        for (i = 0; i < MAX_FIELDS; ++i) {
+            sf[i] = NULL;
+        }
+
+        ns = splitHashInplace(bufS, sf, MAX_FIELDS);
+
+        for (i = 0; i < ns; ++i) {
+            char tmp[64];
+
+            if (sf[i] == NULL) {
+                continue;
+            }
+
+            strncpy(tmp, sf[i], sizeof(tmp));
+            tmp[sizeof(tmp) - 1] = '\0';
+            trimSpaces(tmp);
+
+            if (tmp[0] == '\0') {
+                continue;
+            }
+
+            if (gid[0] == '\0' && strncmp(tmp, "GID", 3) == 0) {
+                strncpy(gid, tmp, sizeof(gid));
+                gid[sizeof(gid) - 1] = '\0';
+
+                continue;
+            }
+
+            if (pid[0] == '\0' && strncmp(tmp, "PID", 3) == 0) {
+                strncpy(pid, tmp, sizeof(pid));
+                pid[sizeof(pid) - 1] = '\0';
+
+                continue;
+            }
+
+            if (sid[0] == '\0' && strncmp(tmp, "SID", 3) == 0) {
+                strncpy(sid, tmp, sizeof(sid));
+                sid[sizeof(sid) - 1] = '\0';
+
+                continue;
+            }
+
+            if (date[0] == '\0' &&
+                strlen(tmp) == 8 && isNdigits(tmp, 8)) {
+                strncpy(date, tmp, sizeof(date));
+                date[sizeof(date) - 1] = '\0';
+
+                continue;
+            }
+        }
+
+        for (i = 0; i < ns; ++i) {
+            char t[32];
+
+            if (sf[i] == NULL) {
+                continue;
+            }
+
+            strncpy(t, sf[i], sizeof(t));
+            t[sizeof(t) - 1] = '\0';
+            trimSpaces(t);
+
+            if (!t[0]) {
+                continue;
+            }
+
+            if (isNdigits(t, (int)strlen(t))) {
+                prev = last;
+                last = i;
+            }
+        }
+
+        if (last >= 0 && sf[last]) {
+            strncpy(secs, sf[last], sizeof(secs));
+            secs[sizeof(secs) - 1] = '\0';
+        }
+
+        if (prev >= 0 && sf[prev]) {
+            strncpy(mins, sf[prev], sizeof(mins));
+            mins[sizeof(mins) - 1] = '\0';
+        }
+
+        seconds = toIntDef(mins, 0) * 60 + toIntDef(secs, 0);
+        found = 0;
+
+        for (i = 0; i < playersCnt; ++i) {
+            if (strcmp(players[i].PID, pid) == 0) {
+                plFound = players[i];
+                found = 1;
+
+                break;
+            }
+        }
+
+        if (!found) {
+            continue;
+        }
+
+        memset(&res, 0, sizeof(MResult));
+
+        if (sid[0]) {
+            strncpy(res.SID, sid, sizeof(res.SID));
+            res.SID[sizeof(res.SID) - 1] = '\0';
+        }
+
+        if (gid[0]) {
+            strncpy(res.GID, gid, sizeof(res.GID));
+            res.GID[sizeof(res.GID) - 1] = '\0';
+            res.NarSut = gid[3];
+        } else {
+            res.NarSut = ' ';
+        }
+
+        if (date[0]) {
+            strncpy(res.DatHry, date, sizeof(res.DatHry));
+            res.DatHry[sizeof(res.DatHry) - 1] = '\0';
+        }
+
+        res.Trvanie = seconds;
+        res.NarHry = 'A';
+
+        node = (MNode*)malloc(sizeof(MNode));
+
+        if (node == NULL) {
+            cur = head;
+
+            while (cur != NULL) {
+                next = cur->next;
+                free(cur);
+                cur = next;
+            }
+            free(players);
+
+            printf("M: Neotvoreny subor.\n");
+
+            return 0;
+        }
+
+        node->player = plFound;
+        node->result = res;
+        node->next = NULL;
+
+        if (head == NULL) {
+            head = tail = node;
+        } else {
+            tail->next = node;
+            tail = node;
+        }
+        nRecords++;
+    }
+
+    free(players);
+
+    *pHeadM = head;
+
+    printf("M: Nacitalo sa %d zaznamov.\n", nRecords);
+
+    return 0;
+}
 
 // n
 int cmd_n(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud, const char *fnPlr, const char *fnSol, char ***outPlayers,   int *outPlayersCnt, char ***outSolutions, int *outSolutionsCnt) {
@@ -1219,6 +1528,7 @@ void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud,
     char **sudokuArr = NULL;
     char **playersArr = NULL;
     char **solutionsArr= NULL;
+
     int sudokuCnt = 0;
     int playersCnt = 0;
     int solutionsCnt = 0;
@@ -1226,6 +1536,8 @@ void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud,
     char c;
     int choice;
     char sidline[128];
+
+    MNode *mHead = NULL;
 
     while (fgets(cmdline, sizeof(cmdline), stdin)) {
         chomp(cmdline);
@@ -1330,6 +1642,11 @@ void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud,
             choice = atoi(xbuf);
             cmd_e(fSud, fnSud, sidbuf, choice);
 
+            continue;
+        }
+
+        if (sscanf(cmdline, " %c", &c) == 1 && (c == 'm' || c == 'M')) {
+            cmd_m(fSud, fPlr, fSol, fnSud, fnPlr, fnSol, &mHead);
             continue;
         }
     }
