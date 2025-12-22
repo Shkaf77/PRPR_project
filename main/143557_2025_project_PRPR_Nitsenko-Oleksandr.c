@@ -562,7 +562,6 @@ void cmd_s(MNode **pHead) {
 int cmd_a(MNode **pHead) {
     char line[256];
     int Y;
-    char pidNew[16];
     char meno[64];
     char krajina[64];
     char rokStr[32];
@@ -570,7 +569,6 @@ int cmd_a(MNode **pHead) {
     int maxA = 0;
     int num;
     int pos;
-
     MNode *cur;
     MNode *node;
     MNode *prev;
@@ -589,17 +587,9 @@ int cmd_a(MNode **pHead) {
         return 0;
     }
 
-    if (fgets(line, sizeof(line), stdin) == NULL) {
-        printf("A: Nespravny vstup.\n");
-
-        return 0;
-    }
-
-    chomp(line);
-
     if (fgets(meno, sizeof(meno), stdin) == NULL) {
         printf("A: Nespravny vstup.\n");
-        
+
         return 0;
     }
 
@@ -620,15 +610,19 @@ int cmd_a(MNode **pHead) {
     }
 
     chomp(rokStr);
+
     rok = atoi(rokStr);
     cur = *pHead;
 
     while (cur != NULL) {
-        if (strcmp(cur->player.Identita, meno) == 0 && cur->player.RokNar == rok) {
+        if (strcmp(cur->player.Identita, meno) == 0 &&
+            cur->player.RokNar == rok) {
+
             printf("A: Duplicita zaznamu.\n");
 
             return 0;
         }
+
         cur = cur->next;
     }
 
@@ -637,7 +631,6 @@ int cmd_a(MNode **pHead) {
     while (cur != NULL) {
         if (strncmp(cur->player.PID, "PIDa", 4) == 0) {
             num = atoi(cur->player.PID + 4);
-
             if (num > maxA) {
                 maxA = num;
             }
@@ -646,7 +639,6 @@ int cmd_a(MNode **pHead) {
     }
 
     num = maxA + 1;
-    sprintf(pidNew, "PIDa%05d", num);
 
     node = (MNode*)malloc(sizeof(MNode));
 
@@ -655,25 +647,25 @@ int cmd_a(MNode **pHead) {
         return 0;
     }
 
-    strcpy(node->player.PID, pidNew);
+    sprintf(node->player.PID, "PIDa%05d", num);
     strcpy(node->player.Identita, meno);
     strcpy(node->player.Krajina, krajina);
 
     node->player.RokNar = rok;
-
-    node->result.SID[0] = '\0';
-    node->result.NarHry = 0;
-    node->result.GID[0] = '\0';
-    node->result.NarSut = 0;
+    node->result.SID[0]  = '\0';
+    node->result.NarHry  = 0;
+    node->result.GID[0]  = '\0';
+    node->result.NarSut  = 0;
     node->result.DatHry[0] = '\0';
     node->result.Trvanie = 0;
-
     node->next = NULL;
 
-    if (Y <= 1 || *pHead == NULL) {
+    if (*pHead == NULL || Y <= 1) {
         node->next = *pHead;
+
         *pHead = node;
         pos = 1;
+
     } else {
         prev = NULL;
         cur  = *pHead;
@@ -681,19 +673,17 @@ int cmd_a(MNode **pHead) {
 
         while (cur != NULL && pos < Y) {
             prev = cur;
-            cur  = cur->next;
+            cur = cur->next;
             pos++;
         }
-
         prev->next = node;
         node->next = cur;
     }
 
     printf("A: Uspesne pridany zaznam na pozicii %d.\n", pos);
-
+    
     return 0;
 }
-
 
 //m
 int cmd_m(FILE **fSudoku, FILE **fPlayers, FILE **fSolutions,  const char *fnSudoku, const char *fnPlayers, const char *fnSolutions, MNode **pHeadM) {
@@ -1046,6 +1036,7 @@ int cmd_n(FILE **fSud, FILE **fPlr, FILE **fSol, const char *fnSud, const char *
         if (sCnt == sCap) {
             int newCap = (sCap == 0) ? 32 : (sCap * 2);
             char **tmp = (char**)realloc(sArr, newCap * sizeof(char*));
+
             if (!tmp) {
                 printf("N: Neotvoreny subor.\n"); 
                 goto fail;
@@ -1976,7 +1967,7 @@ void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, char *fnSud, char 
 
         if (sscanf(cmdline, " %c", &c) == 1 && (c == 'n' || c == 'N')) {
             if (cmd_n(fSud, fPlr, fSol, fnSud, fnPlr, fnSol, &playersArr, &playersCnt, &solutionsArr, &solutionsCnt)) {
-                printf("");
+                printf("N: Polia boli vytvorené\n");
             }
 
             continue;
@@ -2064,8 +2055,7 @@ void handleCommandLoop(FILE **fSud, FILE **fPlr, FILE **fSol, char *fnSud, char 
 
 
 
-int main(void)
-{
+int main(void) {
     FILE *fSud = NULL, *fPlr = NULL, *fSol = NULL;
 
     char **sudokuArr = NULL;
